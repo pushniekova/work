@@ -3,26 +3,34 @@ import telebot
 TOKEN = '8dcb5e275362be4dd7123d2fde98a26c55c45638829756b69748ed07c0ffd2fe'
 bot = telebot.TeleBot(TOKEN)
 
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 import psycopg2
-import telegram
-import os
-import telegram
-from telegram import Update
-from telegram.ext import CallbackContext
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import MessageHandler, Filters
-# Import necessary modules
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
-import telegram
-from telegram import ParseMode
+import datetime
 
 
+def send_message(chat_id, text):
+    bot.send_message(chat_id=chat_id, text=text)
 
-
-
+# Define requires_plan as a boolean variable
+requires_plan = True
 def my_function(update: Update, context: CallbackContext):
     # function code here
     pass
+
+def some_function(update, context, chat_id):
+    client_id = clients.get(chat_id)
+    if client_id is None:
+        client_id = generate_customer_id(chat_id)
+        clients[chat_id] = client_id
+        chat_id = update.message.chat_id
+        some_function(update, context, chat_id)
+
+    # Send a message with a link to the completed part of the task
+    text = "Частина вашої роботи виконана і ви можете її переглянути."
+    parse_mode = "HTML"
+    bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+
 
 
 TOPIC = "Тема роботи"
@@ -30,7 +38,6 @@ PAGES = "Вкажіть кількість сторінок (від 1 до 150)"
 UNIQUENESS ="Вкажіть % унікальності"
 DEADLINE = "На яку дату вам потрібна робота? (Враховуйте, що якщо робота термінова, то вартість буде збільшена)"
 COMMENT = "Можливо є коментар або методичка? Якщо так, напишіть коментар або надішліть файл."
-AUTHOR_CHAT_ID = 859360040
 COST_CONFIRM = False
 task_type = "Реферат"
 "Магістерська робота"
@@ -56,18 +63,6 @@ task_type = "Реферат"
 "Рецензія"
 "Анотація"
 
-def function_name(update, context):
-    task_type = context.user_data['task_type']
-    # rest of the function code
-
-
-import random
-
-def generate_customer_id():
-    return random.randint(1000, 9999)
-
-import psycopg2
-
 # з'єднання з базою даних
 conn = psycopg2.connect(
     host="ec2-99-80-170-190.eu-west-1.compute.amazonaws.com",
@@ -76,128 +71,62 @@ conn = psycopg2.connect(
     password="e8801e547af82086f7acd9584ab93cefec0a67706a5d004ae799ad1959543306",
     port="5432"
 )
-
-# створення курсора для виконання запитів
-cur = conn.cursor()
-cur.execute("""CREATE TABLE IF NOT EXISTS orders (
-                id SERIAL PRIMARY KEY,
-                topic VARCHAR(255) NOT NULL,
-                pages INTEGER NOT NULL,
-                uniqueness INTEGER NOT NULL,
-                deadline DATE NOT NULL,
-                comment TEXT,
-                timestamp TIMESTAMP DEFAULT NOW()
-            )""")
-
-def function_name(update, context):
-    user_id = generate_customer_id()
-    task_type = context.user_data['task_type']
-    topic = context.user_data['TOPIC']
-    pages = context.user_data['PAGES']
-    uniqueness = context.user_data['UNIQUENESS']
-    deadline = context.user_data['DEADLINE']
-    comment = context.user_data['COMMENT']
-
-    # вставка даних користувача в таблицю orders
-    cur.execute("INSERT INTO orders (id, topic, pages, uniqueness, deadline, comment) VALUES (%s, %s, %s, %s, %s, %s)",
-                (user_id, topic, pages, uniqueness, deadline, comment))
-    conn.commit()
-
-    # rest of the function code
-# виконання запиту
-cur.execute("SELECT * FROM orders")
-
-
-
-# отримання результатів запиту
-results = cur.fetchall()
-
-# роздруківка результатів
-for row in results:
-    print(row)
-
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import uuid
 
-TOKEN = "6201719090:AAHVmrXtpwRTD31h2XZtvF29S8sVr2VTOj8"
-
-# словник для зберігання ідентифікаторів клієнтів
 clients = {}
 
-
-def start(update, context):
-    #Функція викликається при вході в бота
-    chat_id = update.effective_chat.id
+def generate_customer_id(chat_id):
+    # generate a new unique identifier for the client
     if chat_id not in clients:
-        # генеруємо новий унікальний ідентифікатор для клієнта
         client_id = str(uuid.uuid4())
-        # зберігаємо ідентифікатор клієнта в словнику
+        # save the client identifier in the dictionary
         clients[chat_id] = client_id
     else:
-        # отримуємо існуючий ідентифікатор для клієнта
+        # get the existing identifier for the client
         client_id = clients[chat_id]
+    return client_id
 
-def start(message):
-    bot.send_message(message.chat.id, "<b>Привіт! Я можу допомогти з виконанням твого завдання. Що потрібно?</b>", parse_mode='HTML')
+def start(update, context, payment_id):
+    chat_id = update.effective_chat.id
+    client_id_value = generate_customer_id(chat_id)
+    # rest of the code
+    person_id = clients[chat_id]
+    # rest of the code
+
+
+    bot.send_message(chat_id, "<b>Привіт! Я можу допомогти з виконанням твого завдання. Що потрібно?</b>", parse_mode='HTML')
 
     def some_handler(update, context):
         show_options(update, context)
+# define callback functions
 def show_options(update, context):
     # Функція виводить кнопки з варіантами робіт.
     keyboard = [
-        [
-            InlineKeyboardButton("Дипломна робота", callback_data="diploma"),
-            InlineKeyboardButton("Реферат", callback_data="essay")
-        ],
-        [
-            InlineKeyboardButton("Магістерська робота", callback_data="master"),
-            InlineKeyboardButton("Бакалаврська робота", callback_data="bachelor")
-        ],
-        [
-            InlineKeyboardButton("Доповідь", callback_data="report"),
-            InlineKeyboardButton("Есе", callback_data="composition")
-        ],
-        [
-            InlineKeyboardButton("Стаття", callback_data="article"),
-            InlineKeyboardButton("Контрольна робота", callback_data="test")
-        ],
-        [
-            InlineKeyboardButton("Відповіді на запитання", callback_data="faq"),
-            InlineKeyboardButton("Бізнес план", callback_data="business_plan")
-        ],
-        [
-            InlineKeyboardButton("Переклад", callback_data="translation"),
-            InlineKeyboardButton("Онлайн допомога на іспиті", callback_data="exam_help")
-        ],
-        [
-            InlineKeyboardButton("Звіт з практики", callback_data="practice_report"),
-            InlineKeyboardButton("Лабораторна робота", callback_data="lab")
-        ],
-        [
-            InlineKeyboardButton("Копірайтінг", callback_data="copywriting"),
-            InlineKeyboardButton("Рерайтінг", callback_data="rewriting")
-        ],
-        [
-            InlineKeyboardButton("Креслення", callback_data="drawing"),
-            InlineKeyboardButton("Презентація", callback_data="presentation")
-        ],
-        [
-            InlineKeyboardButton("Домашнє завдання", callback_data="homework"),
-            InlineKeyboardButton("Колоквіум", callback_data="quiz")
-        ],
-        [
-            InlineKeyboardButton("Вирішення задач", callback_data="problem_solving"),
-            InlineKeyboardButton("Підвищення унікальності тексту", callback_data="uniqueness")
-        ],
-        [
-            InlineKeyboardButton("Рецензія", callback_data="review"),
-            InlineKeyboardButton("Анотація", callback_data="abstract")
-        ],
-        [
-            InlineKeyboardButton("План до дипломної роботи", callback_data="diploma_plan"),
-            InlineKeyboardButton("План до дипломної роботи", callback_data="diploma_plan")
-        ]
+        [InlineKeyboardButton("Дипломна робота", callback_data="diploma"),
+         InlineKeyboardButton("Реферат", callback_data="essay")],
+        [InlineKeyboardButton("Магістерська робота", callback_data="master"),
+         InlineKeyboardButton("Бакалаврська робота", callback_data="bachelor")],
+        [InlineKeyboardButton("Доповідь", callback_data="report"),
+         InlineKeyboardButton("Есе", callback_data="composition")],
+        [InlineKeyboardButton("Стаття", callback_data="article"),
+         InlineKeyboardButton("Контрольна робота", callback_data="test")],
+        [InlineKeyboardButton("Відповіді на запитання", callback_data="faq"),
+         InlineKeyboardButton("Бізнес план", callback_data="business_plan")],
+        [InlineKeyboardButton("Переклад", callback_data="translation"),
+         InlineKeyboardButton("Онлайн допомога на іспиті", callback_data="exam_help")],
+        [InlineKeyboardButton("Звіт з практики", callback_data="practice_report"),
+         InlineKeyboardButton("Лабораторна робота", callback_data="lab")],
+        [InlineKeyboardButton("Копірайтінг", callback_data="copywriting"),
+         InlineKeyboardButton("Рерайтінг", callback_data="rewriting")],
+        [InlineKeyboardButton("Креслення", callback_data="drawing"),
+         InlineKeyboardButton("Презентація", callback_data="presentation")],
+        [InlineKeyboardButton("Домашнє завдання", callback_data="homework"),
+         InlineKeyboardButton("Колоквіум", callback_data="quiz")],
+        [InlineKeyboardButton("Вирішення задач", callback_data="problem_solving"),
+         InlineKeyboardButton("Підвищення унікальності тексту", callback_data="uniqueness")],
+        [InlineKeyboardButton("Рецензія", callback_data="review"),
+         InlineKeyboardButton("Анотація", callback_data="abstract")],
+        [InlineKeyboardButton("План до дипломної роботи", callback_data="diploma_plan")]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -205,135 +134,89 @@ def show_options(update, context):
 
 
 def button_click(update, context):
-    # Code here
-    pass
-
-# Функція обробляє вибір з кнопок.
-def callback_handler(update, context):
     query = update.callback_query
     query.answer()
-    query.edit_message_text(text=f"Ви обрали: {query.data}")
 
+    # Store the selected values in variables
+    order_type = query.data
+    chat_id = update.effective_chat.id
+    customer_id = update.effective_user.id
 
-def main():
-    # Функція створює бота і запускає його.
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-    # Обробка команд
-    dp.add_handler(CommandHandler("start", start))
+    # Save the selected values as context variables
+    context.chat_data["order_type"] = order_type
+    context.chat_data["chat_id"] = chat_id
+    context.chat_data["customer_id"] = customer_id
 
-def button_click(update, context):
-    # Функція обробляє вибір з кнопок.
-    def callback_handler(update, context):
-        query = update.callback_query
-        query.answer()
-        query.edit_message_text(text=f"Ви обрали: {query.data}")
-
-def show_options(update, context):
-    # Функція виводить кнопки з варіантами робіт.
-    keyboard = [
-        [
-            InlineKeyboardButton("Дипломна робота", callback_data="diploma"),
-            InlineKeyboardButton("Реферат", callback_data="essay")
-        ],
-        [
-            InlineKeyboardButton("Магістерська робота", callback_data="master"),
-            InlineKeyboardButton("Бакалаврська робота", callback_data="bachelor")
-        ],
-        [
-            InlineKeyboardButton("Доповідь", callback_data="report"),
-            InlineKeyboardButton("Есе", callback_data="composition")
-        ],
-        [
-            InlineKeyboardButton("Стаття", callback_data="article"),
-            InlineKeyboardButton("Контрольна робота", callback_data="test")
-        ],
-        [
-            InlineKeyboardButton("Відповіді на запитання", callback_data="faq"),
-            InlineKeyboardButton("Бізнес план", callback_data="business_plan")
-        ],
-        [
-            InlineKeyboardButton("Переклад", callback_data="translation"),
-            InlineKeyboardButton("Онлайн допомога на іспиті", callback_data="exam_help")
-        ],
-        [
-            InlineKeyboardButton("Звіт з практики", callback_data="practice_report"),
-            InlineKeyboardButton("Лабораторна робота", callback_data="lab")
-        ],
-        [
-            InlineKeyboardButton("Копірайтінг", callback_data="copywriting"),
-            InlineKeyboardButton("Рерайтінг", callback_data="rewriting")
-        ],
-        [
-            InlineKeyboardButton("Креслення", callback_data="drawing"),
-            InlineKeyboardButton("Презентація", callback_data="presentation")
-        ],
-        [
-            InlineKeyboardButton("Домашнє завдання", callback_data="homework"),
-            InlineKeyboardButton("Колоквіум", callback_data="quiz")
-        ],
-        [
-            InlineKeyboardButton("Вирішення задач", callback_data="problem_solving"),
-            InlineKeyboardButton("Підвищення унікальності тексту", callback_data="uniqueness")
-        ],
-        [
-            InlineKeyboardButton("Рецензія", callback_data="review"),
-            InlineKeyboardButton("Анотація", callback_data="abstract")
-        ],
-        [
-            InlineKeyboardButton("План до дипломної роботи", callback_data="diploma_plan")
-        ]
-    ]
-
-def subject(update, context):
-    # Function to ask for the subject of the work"
-    text = "З якого предмету вам потрібна допомога?"
-    update.message.reply_text(text)
-    return TOPIC
-
-
+    # Ask for more information
+    update.message.reply_text("З якого предмету вам потрібна допомога?")
 
 def topic(update, context):
-    # Function to ask for the topic of the work
     text = "Вкажіть тему."
     update.message.reply_text(text)
-    return PAGES
+
+    # Save the selected value as a context variable
+    context.chat_data["topic"] = update.message.text
+
+    return "pages"
 
 
 def pages(update, context):
-    # Function to ask for the number of pages
     text = "Вкажіть кількість сторінок (від 1 до 150)"
     update.message.reply_text(text)
-    return UNIQUENESS
+
+    # Save the selected value as a context variable
+    context.chat_data["pages"] = update.message.text
+
+    return "uniqueness"
 
 
 def uniqueness(update, context):
-    """Function to ask for the uniqueness percentage"""
-    text = "Вкажіть % унікальності"
+    text = "Вкажіть % унікальності (від 0 до 100)"
     update.message.reply_text(text)
-    return DEADLINE
+
+    # Save the selected value as a context variable
+    context.chat_data["uniqueness"] = update.message.text
+    return "deadline"
 
 
 def deadline(update, context):
     """Function to ask for the deadline"""
     text = "На яку дату вам потрібна робота? (Враховуйте, що якщо робота термінова, то вартість буде збільшена)"
     update.message.reply_text(text)
-    return COMMENT
+    return "comment"
 
 
 def comment(update, context):
-    """Function to ask if there are any comments or additional materials"""
-    text = "Можливо є коментар або методичка? Якщо так, напишіть коментар або надішліть файл."
+    text = "Введіть ваш коментар"
     update.message.reply_text(text)
-    return ConversationHandler.END
+
+    # Save the selected value as a context variable
+    context.chat_data["comment"] = update.message.text
+
+    # Get all the stored values
+    chat_id = context.chat_data["chat_id"]
+    client_id = clients[chat_id]  # use the generated client_id as the order number
+    order_type = context.chat_data["order_type"]
+    theme = context.chat_data["topic"]
+    uniqueness = context.chat_data["uniqueness"]
+    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    comment = context.chat_data["comment"]
+
+    # Commit the transaction
+
+    conn.commit()
+
+
+import psycopg2
 import os
 
-# отримайте URL бази даних зі змінної середовища
+# Отримати URL бази даних зі змінної середовища
 DATABASE_URL = os.getenv('DATABASE_URL', 'ваш URL бази даних')
 
-def save_order_to_database(update: Update, context: CallbackContext):
+
+def save_order_to_database(update, context):
     chat_id = update.message.chat_id
-    customer_id = generate_customer_id()  # Функція для генерації ID замовника
+    customer_id = generate_customer_id(chat_id)  # Функція для генерації ID замовника
     order_type = context.user_data['order_type']
     theme = context.user_data['theme']
     uniqueness = context.user_data['uniqueness']
@@ -342,16 +225,6 @@ def save_order_to_database(update: Update, context: CallbackContext):
 
     # Збереження інформації в базу даних
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO orders (customer_id, chat_id, order_type, theme, uniqueness, date, comment) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (customer_id, chat_id, order_type, theme, uniqueness, date, comment)
-    )
-
-    conn.commit()
-    cursor.close()
-    conn.close()
 
     # Збереження інформації в Heroku
     order_info = f"<b>ID ЗАМОВНИКА:</b> {customer_id}\n" \
@@ -363,41 +236,6 @@ def save_order_to_database(update: Update, context: CallbackContext):
                  f"<b>КОМЕНТАР:</b> {comment}"
 
     context.bot.send_message(chat_id=os.environ['HEROKU_APP_NAME'], text=order_info, parse_mode=ParseMode.HTML)
-
-
-
-
-
-def save_order_to_database(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
-    customer_id = generate_customer_id() # Функція для генерації ID замовника
-    order_type = context.user_data['order_type']
-    theme = context.user_data['theme']
-    uniqueness = context.user_data['uniqueness']
-    date = context.user_data['date']
-    comment = context.user_data['comment']
-    # Запис інформації в файл
-    with open('orders.txt', 'a') as file:
-        file.write(f"{customer_id} - {order_type}\n")
-        file.write(f"Предмет: {theme}\n")
-        file.write(f"Тема: {context.user_data['topic']}\n")
-        file.write(f"Сторінок: {context.user_data['pages']}\n")
-        file.write(f"Унікальність: {uniqueness}%\n")
-        file.write(f"Дата: {date}\n")
-        file.write(f"Коментар: {comment}\n\n")
-
-    # Запис інформації в базу даних
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO orders (customer_id, chat_id, order_type, theme, uniqueness, date, comment) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (customer_id, chat_id, order_type, theme, uniqueness, date, comment)
-    )
-
-    conn.commit()
-    cursor.close()
-    conn.close()
 
     # Надіслати підтвердження про збереження інформації
     update.message.reply_text("Інформацію збережено. Дякую!")
@@ -450,180 +288,48 @@ author_handler = ConversationHandler(
     },
     fallbacks=[],
 )
+def generate_message(doc_type, uniqueness, pages, time_limit):
+    def calculate_cost(task_type, pages, uniqueness, urgency):
+        cost = 0  # Initialize cost to 0
 
-work_type = input("Enter the type of work: ")
-uniqueness = int(input("Enter the uniqueness of the content: "))
-pages = int(input("Enter the number of pages: "))
-def calculate_order_cost(pages, task_type, urgency, uniqueness):
-    # калькулятор
-    if task_type in ['Дипломна робота', 'магістерська робота', 'бакалаврська робота']:
-        if uniqueness <= 30:
-            cost = 20 * pages
-        elif 30 < uniqueness <= 50:
-            cost = 30 * pages
-        elif 50 < uniqueness <= 80:
-            cost = 50 * pages
-        elif 80 < uniqueness <= 100:
-            cost = 60 * pages
-    else:
-        if uniqueness <= 50:
-            cost = 10 * pages
-        elif 50 < uniqueness <= 80:
-            cost = 20 * pages
-        elif 80 < uniqueness <= 100:
-            cost = 30 * pages
+        # calculator function
+        def calculate_price(doc_type, uniqueness, pages, time_limit):
+            if doc_type == "Реферат" or doc_type == "Відповіді на запитання" or doc_type == "Доповідь" or doc_type == "Презентація" or doc_type == "Колоквіум" or doc_type == "Підвищення унікальності тексту" or doc_type == "Рецензія":
+                return 20
+            elif doc_type == "Курсова робота" or doc_type == "Стаття" or doc_type == "Есе" or doc_type == "Копірайтінг" or doc_type == "Рерайтінг":
+                if 1 <= uniqueness <= 50:
+                    return 10 * pages + (1000 if time_limit < 14 else 0)
+                elif 50 < uniqueness <= 80:
+                    return 20 * pages + (1000 if time_limit < 14 else 0)
+                elif 80 < uniqueness <= 100:
+                    return 30 * pages + (1000 if time_limit < 14 else 0)
+            elif doc_type == "Магістерська робота" or doc_type == "Бакалаврська робота":
+                if 1 <= uniqueness <= 30:
+                    return 20 * pages + (1000 if time_limit < 14 else 0)
+                elif 30 < uniqueness <= 50:
+                    return 30 * pages + (1000 if time_limit < 14 else 0)
+                elif 50 < uniqueness <= 80:
+                    return 50 * pages + (1000 if time_limit < 14 else 0)
+                elif 80 < uniqueness <= 100:
+                    return 60 * pages + (1000 if time_limit < 14 else 0)
+            elif doc_type == "Контрольна робота" or doc_type == "Лабораторна робота" or doc_type == "Креслення" or doc_type == "Домашнє завдання":
+                return 150 + (1000 if time_limit < 14 else 0)
+            elif doc_type == "Бізнес план" or doc_type == "Звіт з практики":
+                return 400 + (1000 if time_limit < 14 else 0)
+            elif doc_type == "Переклад":
+                return 50 * pages
+            elif doc_type == "Онлайн допомога на іспиті":
+                return 180
 
-    if task_type in ['Курсова робота', 'есе', 'стаття', 'копірайтинг', 'рерайт']:
-        if urgency == '6-12 днів':
-            cost = cost * 1.5
-        elif urgency == '3-5 днів':
-            cost = cost * 2
-        elif urgency == '1-2 дні':
-            cost = cost * 3
-        elif urgency == '6-24 години':
-            cost = cost * 5
+        def calculate_order_cost(pages, task_type, urgency, uniqueness):
+            cost = calculate_price(task_type, uniqueness, pages, urgency)
 
-    elif task_type in ['Реферат', 'доповідь']:
-        if urgency == '6-12 днів':
-            cost = cost * 1.2
-        elif urgency == '3-5 днів':
-            cost = cost * 1.5
-        elif urgency == '1-2 дні':
-            cost = cost * 2
-        elif urgency == '6-24 години':
-            cost = cost * 3
-
-    return cost
-
-def confirm_order(update, context):
-    # ... get information from the user_data dictionary ...
-
-    # Get the task type from user data
-    task_type = context.user_data.get('task_type', '')
-
-    def confirm_order_details(update, context):
-        # Get the order details from the user
-        task_type = context.user_data['task_type']
-        uniqueness = context.user_data['uniqueness']
-        pages = context.user_data['pages']
-        urgency = context.user_data['urgency']
-
-        # Calculate the order cost
-        cost = calculate_order_cost(pages, task_type, urgency, uniqueness)
-
-        # Check the cost and perform additional actions if necessary
-        if task_type in ["Дипломна робота", "магістерська робота", "бакалаврська робота"]:
-            # Perform additional actions for diploma, term paper, master's thesis, and bachelor's thesis
-            if cost > 1000:
-                update.message.reply_text("Ціна замовлення дорожча 1000 грн, чи ви погоджуєтеся?")
-                return COST_CONFIRM
-
-                # Format the order details as a string
-            order_details = f"Тип роботи: {task_type}\nУнікальність контенту: {uniqueness}%\nКількість сторінок: {pages}\nТермін виконання: {urgency}\nЦіна: {cost} грн"
-
-            # Send the order details to the user
-            update.message.reply_text(order_details)
-
-            # Ask the user to confirm the order
-            update.message.reply_text("Чи підтверджуєте замовлення?")
-
-            # Return the confirmation status as a string
-            return "CONFIRMED"
-
-        else:
-            # Perform actions for other types of tasks
-            # ...
-
-            cost = calculate_order_cost(pages, task_type, urgency, uniqueness)
-
-            # Do something
-            if cost > 500:
-                update.message.reply_text("Ціна замовлення дорожча 500 грн, чи ви погоджуєтеся?")
-                return COST_CONFIRM
+            if task_type in ["Дипломна робота", "Курсова робота", "Магістерська робота", "Бакалаврська робота"]:
+                message = f"Ваша робота коштуватиме {cost} грн. Для підтвердження внесіть аванс у розмірі 10% і протягом 24 годин ми надішлемо вам план вашого завдання для узгодження з викладачем."
             else:
-                update.message.reply_text("Вартість роботи становить {} грн".format(cost))
-def confirm_cost(update, context):
-    user_response = update.message.text.lower()
-    if user_response == "yes":
-        cost = context.user_data.get('cost')
-        update.message.reply_text("Вартість роботи становить {} грн".format(cost))
+                message = f"Здійснить оплату у вартості {cost} грн. Після перевірки вашого авансу, ми надішлемо вам ваш план роботи."
 
-        def confirm_order_details(update, context):
-            # Get the user's confirmation status
-            confirmed = update.message.text.lower()
-
-            # Check if the user confirmed the order
-            if confirmed in ["yes", "так", "авжеж", "ок"]:
-                # Perform actions to confirm the order
-                # ...
-                update.message.reply_text("Дякуємо за замовлення! Ми зв'яжемося з вами найближчим часом.")
-                return "ORDER_COMPLETED"
-
-            else:
-                # Perform actions if the user didn't confirm the order
-                # ...
-                update.message.reply_text("Замовлення скасовано.")
-                return "ORDER_CANCELLED"
-
-    else:
-        update.message.reply_text("Ви відхилили вартість замовлення.")
-        return ConversationHandler.END
-
-def calculate_cost(task_type, task_details):
-    # Implementation of the function goes here
-    pass
-def get_task_details():
-    # Ask the user for input regarding the task details
-    details = input("Please provide details about the task: ")
-    return details
-
-def calculate_cost(task_type, task_details):
-    # Calculate the cost of the task based on its type and details
-    if task_type == "diploma thesis":
-        cost = 5000
-    elif task_type == "term paper":
-        cost = 3000
-    elif task_type == "master's thesis":
-        cost = 7000
-    elif task_type == "bachelor's thesis":
-        cost = 4000
-    else:
-        cost = 1000
-
-    # Add additional cost based on the length of the task details
-    cost += len(task_details) // 100
-
-    return cost
-
-
-# Check if the task type is a diploma, term paper, master's thesis, or bachelor's thesis
-if task_type in ["diploma thesis", "term paper", "master's thesis", "bachelor's thesis"]:
-    # perform additional actions for diploma, term paper, master's thesis, and bachelor's thesis
-    task_details = get_task_details()
-    # Calculate the cost of the task
-    amount = calculate_cost(task_type, task_details)
-    # Ask the person to confirm their entry
-    bot_message = "Ваша робота коштуватиме " + str(
-        amount) + " грн. Для підтвердження внесіть аванс у розмірі 10% і протягом 24 годин ми надішлемо вам план вашого завдання для узгодження з викладачем."
-else:
-    # perform actions for other types of tasks
-    task_details = get_task_details()
-    # Calculate the cost of the task
-    amount = calculate_cost(task_type, task_details)
-
-    # Ask the person to confirm their entry
-    bot_message = "Ваша робота коштуватиме " + str(
-        amount) + " грн. Для підтвердження внесіть аванс у розмірі 10% і протягом 24 годин ми надішлемо вам план вашого завдання для узгодження з викладачем."
-
-# Check if the task requires a plan
-if task_type == "diploma thesis" or task_type == "term paper" or task_type == "master's thesis" or task_type == "bachelor's thesis":
-    # Ask the person to make a partial payment to confirm the task
-    bot_message = "Після перевірки вашого авансу, ми надішлемо вам ваш план роботи."
-else:
-    # Ask the person to make a full payment to confirm the task
-    bot_message = "Маю перевірити вашу оплату."
-
-# Check if the task requires a plan
+            return message
 def send_messager(client_id, bot_message):
     pass
 
@@ -637,76 +343,67 @@ def attach_link(bot_message, link):
     bot_message += f"\n\nПосилання на частину роботи: {link}"
     return bot_message  # return the updated bot message
 
-    # Define the missing functions here
-    def has_partial_payment(person_id):
-        # Check if the person has made a partial payment for their task
-        # (implementation details omitted for brevity)
-        return True  # replace with actual implementation
+# Import the required modules
+from telegram import ParseMode
 
-    def attach_link(bot_message, link):
-        # Attach the link to the bot message
-        bot_message += f"\n\nПосилання на частину роботи: {link}"
-        return bot_message  # return the updated bot message
 
-    # Check if the task type is a diploma, term paper, master's thesis, or bachelor's thesis
-    if task_type in ["diploma thesis", "term paper", "master's thesis", "bachelor's thesis"]:
-        # Check if the person has made a partial payment
-        if has_partial_payment(person_id):
-            # Send a message with a link to the completed part of the task
-            bot_message = "Частина вашої роботи виконана і ви можете її переглянути за посиланням ..."
-            # Attach the link to the completed part of the task
-            bot_message = attach_link(bot_message, "http://link-to-the-completed-task.com")
-            # Send the message to the person
-            send_message(person_id, bot_message, parse_mode=ParseMode.HTML)
-    else:
-        # perform actions for other types of tasks
-        task_details = get_task_details()
-        # ... rest of the code follows
+# Define the person ID as the author chat ID
+person_id = AUTHOR_CHAT_ID
 
+# Check if the task type is a diploma, term paper, master's thesis, or bachelor's thesis
+if task_type in ["diploma thesis", "term paper", "master's thesis", "bachelor's thesis"]:
+    # Check if the person has made a partial payment
+    if has_partial_payment(person_id):
         # Send a message with a link to the completed part of the task
-        bot_message = "Частина вашої роботи виконана і ви можете її переглянути за посиланням ..."
+        bot_message = "Частина вашої роботи виконана і ви можете її переглянути."
         # Attach the link to the completed part of the task
-        attach_link(bot_message, "http://link-to-the-completed-task.com")
-        # Send the message to the person
-        send_messager(client_id, bot_message)
+        bot_message = attach_link(bot_message, "http://link-to-the-completed-task.com")
+        def get_client_id(payment_id, context):
+            # define the logic to retrieve the client ID from the payment ID and context
+            pass
 
-    # Download the task
-    download_task(task_type, task_details)
-    # Send a message to the person
-    bot_message = "Ваша робота готова до завантаження. Ви можете завантажити її за посиланням ..."
-    # Attach the download link
-    attach_link(bot_message, "http://download-link.com")
-    # Send the message to the person
-    send_message(person, bot_message)
 
-    if has_partial_payment(person):
-        # Attach two buttons - Paid and Not Paid
-        attach_buttons(bot_message, ["Оплачено", "Неоплачено"])
-        # Send the message to the person
-        send_message(person, bot_message)
-    else:
-        # Check if the task is fully completed and ready for download
-        if is_task_ready(task_type, task_details):
-            # Send a message to the person
-            bot_message = "Ви успішно отримали доступ до завантаження вашої роботи."
-            send_message(person, bot_message)
-        else:
-            # Check if there are any other tasks ready without a plan
-            if has_ready_task_without_plan():
-                # Do something
-                pass
+        def payment(update, context):
+            # Get the payment ID from the callback data
+            payment_id = update.callback_query.data
+
+            def start(update, context, payment_id):
+                chat_id = update.effective_chat.id
+                client_id_value = get_client_id(payment_id, context)
+                person_id = clients[chat_id]
+
+            # define the logic to handle the payment
+            pass
+
+            # Get the deadline from the context data
+            deadline = context.chat_data.get("deadline")
+
+            if deadline:
+                # Calculate the due date based on the deadline (this is just an example, you'll need to replace this with your own code)
+                due_date = deadline - datetime.timedelta(days=1)
+
+                # Send a message to the client that their work is in progress
+                bot_message = f"Дякую за оплату, ваша робота в процесі виконання. Надішлю готову роботу так скоро як зможу але не пізніше ніж {due_date}."
+                # Send the message to the person
+                send_message(person_id, bot_message)
             else:
-                # Do something else
-                pass
+                # If the deadline was not provided, send a generic message to the client
+                bot_message = "Дякую за оплату, ваша робота в процесі виконання."
+                # Send the message to the person
+                send_message(person_id, bot_message)
 
-            # Send a message with a link to the ready task
-            bot_message = "Ваша робота готова до завантаження за посиланням ..."
-            # Attach the link to the completed task
-            attach_link(bot_message, "http://link-to-the-ready-task.com")
-            # Send the message to the person
-            send_message(person, bot_message)
-# закриття курсора та з'єднання з базою даних
-cur.close()
-conn.close()
+    else:
+        def some_function(update, context):
+            chat_id = update.message.chat_id
+            client_id = clients.get(chat_id)
+            if client_id is None:
+                client_id = generate_customer_id(chat_id)
+                clients[chat_id] = client_id
+
+            # Send a message with a link to the completed part of the task
+            text = "Частина вашої роботи виконана і ви можете її переглянути."
+            parse_mode = "HTML"
+            bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+            some_function(update, context)
 
 bot.polling(none_stop=True)
